@@ -93,3 +93,42 @@ def insights():
             'insights.html',
             config=config,
             domain = request.url_root)
+
+
+# API: Get candidates by ward
+# Example: GET /api/v1/wards/1/candidates
+from flask import jsonify
+
+@app.route('/api/v1/wards/<ward_id>/candidates', methods=['GET'])
+def get_ward_candidates(ward_id):
+    ward_name = f"Ward {ward_id}"
+
+    query = """
+        SELECT full_names, surname, party, age, gender, orderno
+        FROM candidates
+        WHERE list_type = :ward_name
+        AND candidate_type = 'national_regional'
+        ORDER BY party, orderno
+    """
+    result = db.session.execute(query, {'ward_name': ward_name})
+    rows = result.fetchall()
+
+    if not rows:
+        return jsonify({'error': 'Ward not found', 'ward_id': ward_id}), 404
+
+    candidates = []
+    for row in rows:
+        candidates.append({
+            'full_names': row[0],
+            'surname': row[1],
+            'party': row[2],
+            'age': row[3],
+            'gender': row[4],
+            'orderno': row[5]
+        })
+
+    return jsonify({
+        'ward': ward_name,
+        'count': len(candidates),
+        'candidates': candidates
+    })
